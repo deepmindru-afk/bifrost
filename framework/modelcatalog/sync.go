@@ -8,6 +8,7 @@ import (
 	"net/http"
 	"time"
 
+	"github.com/maximhq/bifrost/core/schemas"
 	configstoreTables "github.com/maximhq/bifrost/framework/configstore/tables"
 	"gorm.io/gorm"
 )
@@ -127,12 +128,17 @@ func (mc *ModelCatalog) syncPricing(ctx context.Context) error {
 		return fmt.Errorf("failed to reload pricing cache: %w", err)
 	}
 
+	if mc.pricingSyncCallback != nil {
+		mc.pricingSyncCallback(pricingData)
+		mc.logger.Debug("pricing sync callback executed")
+	}
+
 	mc.logger.Info("successfully synced %d pricing records", len(pricingData))
 	return nil
 }
 
 // loadPricingFromURL loads pricing data from the remote URL
-func (mc *ModelCatalog) loadPricingFromURL(ctx context.Context) (PricingData, error) {
+func (mc *ModelCatalog) loadPricingFromURL(ctx context.Context) (map[string]schemas.DataSheetPricingEntry, error) {
 	// Create HTTP client with timeout
 	client := &http.Client{
 		Timeout: 30 * time.Second,
@@ -160,7 +166,7 @@ func (mc *ModelCatalog) loadPricingFromURL(ctx context.Context) (PricingData, er
 	}
 
 	// Unmarshal JSON data
-	var pricingData PricingData
+	var pricingData map[string]schemas.DataSheetPricingEntry
 	if err := json.Unmarshal(data, &pricingData); err != nil {
 		return nil, fmt.Errorf("failed to unmarshal pricing data: %w", err)
 	}

@@ -463,6 +463,11 @@ func LoadConfig(ctx context.Context, configDirPath string) (*Config, error) {
 			if err != nil {
 				return nil, fmt.Errorf("failed to update framework config: %w", err)
 			}
+			pricingConfig.PricingSyncCallback = func(pricingData map[string]schemas.DataSheetPricingEntry) {
+				if config.client != nil {
+					config.client.SetPricingData(pricingData)
+				}
+			}
 			config.FrameworkConfig = &framework.FrameworkConfig{
 				Pricing: pricingConfig,
 			}
@@ -911,6 +916,11 @@ func LoadConfig(ctx context.Context, configDirPath string) (*Config, error) {
 		pricingConfig.PricingURL = configData.FrameworkConfig.Pricing.PricingURL
 		syncDuration := time.Duration(*configData.FrameworkConfig.Pricing.PricingSyncInterval) * time.Second
 		pricingConfig.PricingSyncInterval = &syncDuration
+	}
+	pricingConfig.PricingSyncCallback = func(pricingData map[string]schemas.DataSheetPricingEntry) {
+		if config.client != nil {
+			config.client.SetPricingData(pricingData)
+		}
 	}
 	// Updating framework config
 	config.FrameworkConfig = &framework.FrameworkConfig{

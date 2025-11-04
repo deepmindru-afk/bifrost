@@ -54,6 +54,7 @@ type Bifrost struct {
 	responseStreamPool  sync.Pool                          // Pool for response stream channels, initial pool size is set in Init
 	pluginPipelinePool  sync.Pool                          // Pool for PluginPipeline objects
 	bifrostRequestPool  sync.Pool                          // Pool for BifrostRequest objects
+	pricingData         sync.Map                           // pricing data for each model
 	logger              schemas.Logger                     // logger instance, default logger is used if not provided
 	mcpManager          *MCPManager                        // MCP integration manager (nil if MCP not configured)
 	dropExcessRequests  atomic.Bool                        // If true, in cases where the queue is full, requests will not wait for the queue to be empty and will be dropped instead.
@@ -98,6 +99,7 @@ func Init(ctx context.Context, config schemas.BifrostConfig) (*Bifrost, error) {
 		plugins:       atomic.Pointer[[]schemas.Plugin]{},
 		requestQueues: sync.Map{},
 		waitGroups:    sync.Map{},
+		pricingData:   sync.Map{},
 		keySelector:   config.KeySelector,
 		logger:        config.Logger,
 	}
@@ -287,6 +289,8 @@ func (bifrost *Bifrost) ListModelsRequest(ctx context.Context, req *schemas.Bifr
 		}
 		return nil, bifrostErr
 	}
+	// Add pricing data to the response
+	response.AddPricing(bifrost.GetPricingDataForModel)
 	return response, nil
 }
 
@@ -368,6 +372,9 @@ func (bifrost *Bifrost) ListAllModels(ctx context.Context, request *schemas.Bifr
 				if response == nil || len(response.Data) == 0 {
 					break
 				}
+
+				// Add pricing data to the response
+				response.AddPricing(bifrost.GetPricingDataForModel)
 
 				providerModels = append(providerModels, response.Data...)
 
@@ -822,6 +829,38 @@ func (bifrost *Bifrost) ReloadPlugin(plugin schemas.Plugin) error {
 	}
 }
 
+// SetPricingData sets pricing data for all the models.
+// This is used to set pricing data for all the models at once.
+//
+// Parameters:
+//   - pricingData: A map of model names to pricing data
+func (bifrost *Bifrost) SetPricingData(pricingData map[string]schemas.DataSheetPricingEntry) {
+	for model, pricing := range pricingData {
+		bifrost.pricingData.Store(pricing.Provider+"/"+model, pricing)
+	}
+}
+
+// GetPricingDataForModel returns pricing data for a model.
+// This is used to get pricing data for a model.
+//
+// Parameters:
+//   - model: The model to get pricing data for
+//   - provider: The provider to get pricing data for
+//
+// Returns:
+//   - pricing: The pricing data for the model, nil if not found
+func (bifrost *Bifrost) GetPricingDataForModel(model string, provider schemas.ModelProvider) *schemas.DataSheetPricingEntry {
+	pricing, ok := bifrost.pricingData.Load(string(provider) + "/" + model)
+	if !ok {
+		return nil
+	}
+	if pricing, ok := pricing.(schemas.DataSheetPricingEntry); ok {
+		return &pricing
+	}
+	return nil
+}
+
+// GetConfiguredProviders returns a configured providers list.
 func (bifrost *Bifrost) GetConfiguredProviders() ([]schemas.ModelProvider, error) {
 	providers := bifrost.providers.Load()
 	if providers == nil {

@@ -24,8 +24,9 @@ const (
 
 // Config is the model pricing configuration.
 type Config struct {
-	PricingURL          *string        `json:"pricing_url,omitempty"`
-	PricingSyncInterval *time.Duration `json:"pricing_sync_interval,omitempty"`
+	PricingURL          *string                                        `json:"pricing_url,omitempty"`
+	PricingSyncInterval *time.Duration                                 `json:"pricing_sync_interval,omitempty"`
+	PricingSyncCallback func(map[string]schemas.DataSheetPricingEntry) `json:"pricing_sync_callback,omitempty"`
 }
 
 type ModelCatalog struct {
@@ -49,41 +50,9 @@ type ModelCatalog struct {
 	wg         sync.WaitGroup
 	syncCtx    context.Context
 	syncCancel context.CancelFunc
-}
 
-// PricingData represents the structure of the pricing.json file
-type PricingData map[string]PricingEntry
-
-// PricingEntry represents a single model's pricing information
-type PricingEntry struct {
-	// Basic pricing
-	InputCostPerToken  float64 `json:"input_cost_per_token"`
-	OutputCostPerToken float64 `json:"output_cost_per_token"`
-	Provider           string  `json:"provider"`
-	Mode               string  `json:"mode"`
-
-	// Additional pricing for media
-	InputCostPerImage          *float64 `json:"input_cost_per_image,omitempty"`
-	InputCostPerVideoPerSecond *float64 `json:"input_cost_per_video_per_second,omitempty"`
-	InputCostPerAudioPerSecond *float64 `json:"input_cost_per_audio_per_second,omitempty"`
-
-	// Character-based pricing
-	InputCostPerCharacter  *float64 `json:"input_cost_per_character,omitempty"`
-	OutputCostPerCharacter *float64 `json:"output_cost_per_character,omitempty"`
-
-	// Pricing above 128k tokens
-	InputCostPerTokenAbove128kTokens          *float64 `json:"input_cost_per_token_above_128k_tokens,omitempty"`
-	InputCostPerCharacterAbove128kTokens      *float64 `json:"input_cost_per_character_above_128k_tokens,omitempty"`
-	InputCostPerImageAbove128kTokens          *float64 `json:"input_cost_per_image_above_128k_tokens,omitempty"`
-	InputCostPerVideoPerSecondAbove128kTokens *float64 `json:"input_cost_per_video_per_second_above_128k_tokens,omitempty"`
-	InputCostPerAudioPerSecondAbove128kTokens *float64 `json:"input_cost_per_audio_per_second_above_128k_tokens,omitempty"`
-	OutputCostPerTokenAbove128kTokens         *float64 `json:"output_cost_per_token_above_128k_tokens,omitempty"`
-	OutputCostPerCharacterAbove128kTokens     *float64 `json:"output_cost_per_character_above_128k_tokens,omitempty"`
-
-	// Cache and batch pricing
-	CacheReadInputTokenCost   *float64 `json:"cache_read_input_token_cost,omitempty"`
-	InputCostPerTokenBatches  *float64 `json:"input_cost_per_token_batches,omitempty"`
-	OutputCostPerTokenBatches *float64 `json:"output_cost_per_token_batches,omitempty"`
+	// Callback after pricing data is synced
+	pricingSyncCallback func(map[string]schemas.DataSheetPricingEntry)
 }
 
 // Init initializes the pricing manager
@@ -105,6 +74,7 @@ func Init(ctx context.Context, config *Config, configStore configstore.ConfigSto
 		pricingData:         make(map[string]configstoreTables.TableModelPricing),
 		modelPool:           make(map[schemas.ModelProvider][]string),
 		done:                make(chan struct{}),
+		pricingSyncCallback: config.PricingSyncCallback,
 	}
 
 	logger.Info("initializing pricing manager...")
@@ -187,6 +157,19 @@ func (mc *ModelCatalog) getPricingSyncInterval() time.Duration {
 	mc.pricingMu.RLock()
 	defer mc.pricingMu.RUnlock()
 	return mc.pricingSyncInterval
+}
+
+// GetPricingData returns the pricing data
+func (mc *ModelCatalog) GetPricingData() map[string]schemas.DataSheetPricingEntry {
+	mc.mu.RLock()
+	defer mc.mu.RUnlock()
+	// Make a copy of the pricing data
+	pricingData := make(map[string]schemas.DataSheetPricingEntry)
+	for key, pricing := range mc.pricingData {
+		model, _, _ := splitKey(key)
+		pricingData[model] = convertTableModelPricingToPricingData(pricing)
+	}
+	return pricingData
 }
 
 // GetModelsForProvider returns all available models for a given provider (thread-safe)

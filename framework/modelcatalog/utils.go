@@ -10,6 +10,12 @@ import (
 // makeKey creates a unique key for a model, provider, and mode for pricingData map
 func makeKey(model, provider, mode string) string { return model + "|" + provider + "|" + mode }
 
+// splitKey splits a key into model, provider, and mode
+func splitKey(key string) (string, string, string) {
+	parts := strings.Split(key, "|")
+	return parts[0], parts[1], parts[2]
+}
+
 // isBatchRequest checks if the request is for batch processing
 func isBatchRequest(req *schemas.BifrostRequest) bool {
 	// Check for batch endpoints or batch-specific headers
@@ -73,7 +79,7 @@ func normalizeRequestType(reqType schemas.RequestType) string {
 }
 
 // convertPricingDataToTableModelPricing converts the pricing data to a TableModelPricing struct
-func convertPricingDataToTableModelPricing(modelKey string, entry PricingEntry) configstoreTables.TableModelPricing {
+func convertPricingDataToTableModelPricing(modelKey string, entry schemas.DataSheetPricingEntry) configstoreTables.TableModelPricing {
 	provider := normalizeProvider(entry.Provider)
 
 	// Handle provider/model format - extract just the model name
@@ -117,6 +123,31 @@ func convertPricingDataToTableModelPricing(modelKey string, entry PricingEntry) 
 	}
 
 	return pricing
+}
+
+// convertTableModelPricingToPricingData converts the TableModelPricing struct to a DataSheetPricingEntry struct
+func convertTableModelPricingToPricingData(pricing configstoreTables.TableModelPricing) schemas.DataSheetPricingEntry {
+	return schemas.DataSheetPricingEntry{
+		Provider:                                  pricing.Provider,
+		Mode:                                      pricing.Mode,
+		InputCostPerToken:                         pricing.InputCostPerToken,
+		OutputCostPerToken:                        pricing.OutputCostPerToken,
+		InputCostPerImage:                         pricing.InputCostPerImage,
+		InputCostPerVideoPerSecond:                pricing.InputCostPerVideoPerSecond,
+		InputCostPerAudioPerSecond:                pricing.InputCostPerAudioPerSecond,
+		InputCostPerCharacter:                     pricing.InputCostPerCharacter,
+		OutputCostPerCharacter:                    pricing.OutputCostPerCharacter,
+		InputCostPerTokenAbove128kTokens:          pricing.InputCostPerTokenAbove128kTokens,
+		InputCostPerCharacterAbove128kTokens:      pricing.InputCostPerCharacterAbove128kTokens,
+		InputCostPerImageAbove128kTokens:          pricing.InputCostPerImageAbove128kTokens,
+		InputCostPerVideoPerSecondAbove128kTokens: pricing.InputCostPerVideoPerSecondAbove128kTokens,
+		InputCostPerAudioPerSecondAbove128kTokens: pricing.InputCostPerAudioPerSecondAbove128kTokens,
+		OutputCostPerTokenAbove128kTokens:         pricing.OutputCostPerTokenAbove128kTokens,
+		OutputCostPerCharacterAbove128kTokens:     pricing.OutputCostPerCharacterAbove128kTokens,
+		CacheReadInputTokenCost:                   pricing.CacheReadInputTokenCost,
+		InputCostPerTokenBatches:                  pricing.InputCostPerTokenBatches,
+		OutputCostPerTokenBatches:                 pricing.OutputCostPerTokenBatches,
+	}
 }
 
 // getSafeFloat64 returns the value of a float64 pointer or fallback if nil

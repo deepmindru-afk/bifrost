@@ -736,6 +736,8 @@ func (s *BifrostHTTPServer) Bootstrap(ctx context.Context) error {
 	} else {
 		s.Config.PricingManager.AddModelDataToPool(modelData)
 	}
+	// Add pricing data to the client
+	s.Client.SetPricingData(s.Config.PricingManager.GetPricingData())
 	logger.Info("models added to catalog")
 	s.Config.SetBifrostClient(s.Client)
 	// Initializing middlewares
