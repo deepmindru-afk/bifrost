@@ -81,7 +81,7 @@ func (provider *OpenAIProvider) ListModels(ctx context.Context, keys []schemas.K
 	return HandleOpenAIListModelsRequest(ctx,
 		provider.client,
 		request,
-		provider.networkConfig.BaseURL+providerUtils.GetPathFromContext(ctx, "/v1/models"),
+		provider.networkConfig.BaseURL+providerUtils.GetRequestPath(ctx, "/v1/models", provider.customProviderConfig, schemas.ListModelsRequest),
 		keys,
 		provider.networkConfig.ExtraHeaders,
 		providerName,
@@ -184,7 +184,7 @@ func (provider *OpenAIProvider) TextCompletion(ctx context.Context, key schemas.
 	return HandleOpenAITextCompletionRequest(
 		ctx,
 		provider.client,
-		provider.networkConfig.BaseURL+providerUtils.GetPathFromContext(ctx, "/v1/completions"),
+		provider.networkConfig.BaseURL+providerUtils.GetRequestPath(ctx, "/v1/completions", provider.customProviderConfig, schemas.TextCompletionRequest),
 		request,
 		key,
 		provider.networkConfig.ExtraHeaders,
@@ -284,7 +284,7 @@ func (provider *OpenAIProvider) TextCompletionStream(ctx context.Context, postHo
 	return HandleOpenAITextCompletionStreaming(
 		ctx,
 		provider.client,
-		provider.networkConfig.BaseURL+providerUtils.GetPathFromContext(ctx, "/v1/completions"),
+		provider.networkConfig.BaseURL+providerUtils.GetRequestPath(ctx, "/v1/completions", provider.customProviderConfig, schemas.TextCompletionStreamRequest),
 		request,
 		authHeader,
 		provider.networkConfig.ExtraHeaders,
@@ -563,7 +563,7 @@ func (provider *OpenAIProvider) ChatCompletion(ctx context.Context, key schemas.
 	return HandleOpenAIChatCompletionRequest(
 		ctx,
 		provider.client,
-		provider.networkConfig.BaseURL+providerUtils.GetPathFromContext(ctx, "/v1/chat/completions"),
+		provider.networkConfig.BaseURL+providerUtils.GetRequestPath(ctx, "/v1/chat/completions", provider.customProviderConfig, schemas.ChatCompletionRequest),
 		request,
 		key,
 		provider.networkConfig.ExtraHeaders,
@@ -667,7 +667,7 @@ func (provider *OpenAIProvider) ChatCompletionStream(ctx context.Context, postHo
 	return HandleOpenAIChatCompletionStreaming(
 		ctx,
 		provider.client,
-		provider.networkConfig.BaseURL+providerUtils.GetPathFromContext(ctx, "/v1/chat/completions"),
+		provider.networkConfig.BaseURL+providerUtils.GetRequestPath(ctx, "/v1/chat/completions", provider.customProviderConfig, schemas.ChatCompletionStreamRequest),
 		request,
 		authHeader,
 		provider.networkConfig.ExtraHeaders,
@@ -954,7 +954,7 @@ func (provider *OpenAIProvider) Responses(ctx context.Context, key schemas.Key, 
 	return HandleOpenAIResponsesRequest(
 		ctx,
 		provider.client,
-		provider.networkConfig.BaseURL+providerUtils.GetPathFromContext(ctx, "/v1/responses"),
+		provider.networkConfig.BaseURL+providerUtils.GetRequestPath(ctx, "/v1/responses", provider.customProviderConfig, schemas.ResponsesRequest),
 		request,
 		key,
 		provider.networkConfig.ExtraHeaders,
@@ -1052,12 +1052,12 @@ func (provider *OpenAIProvider) ResponsesStream(ctx context.Context, postHookRun
 	var authHeader map[string]string
 	if key.Value != "" {
 		authHeader = map[string]string{"Authorization": "Bearer " + key.Value}
-	}
+	}	
 	// Use shared streaming logic
 	return HandleOpenAIResponsesStreaming(
 		ctx,
 		provider.client,
-		provider.networkConfig.BaseURL+providerUtils.GetPathFromContext(ctx, "/v1/responses"),
+		provider.networkConfig.BaseURL+providerUtils.GetRequestPath(ctx, "/v1/responses", provider.customProviderConfig, schemas.ResponsesStreamRequest),
 		request,
 		authHeader,
 		provider.networkConfig.ExtraHeaders,
@@ -1301,7 +1301,7 @@ func (provider *OpenAIProvider) Embedding(ctx context.Context, key schemas.Key, 
 	return HandleOpenAIEmbeddingRequest(
 		ctx,
 		provider.client,
-		provider.networkConfig.BaseURL+providerUtils.GetPathFromContext(ctx, "/v1/embeddings"),
+		provider.networkConfig.BaseURL+providerUtils.GetRequestPath(ctx, "/v1/embeddings", provider.customProviderConfig, schemas.EmbeddingRequest),
 		request,
 		key,
 		provider.networkConfig.ExtraHeaders,
@@ -1409,7 +1409,7 @@ func (provider *OpenAIProvider) Speech(ctx context.Context, key schemas.Key, req
 	// Set any extra headers from network config
 	providerUtils.SetExtraHeaders(ctx, req, provider.networkConfig.ExtraHeaders, nil)
 
-	req.SetRequestURI(provider.networkConfig.BaseURL + providerUtils.GetPathFromContext(ctx, "/v1/audio/speech"))
+	req.SetRequestURI(provider.networkConfig.BaseURL + providerUtils.GetRequestPath(ctx, "/v1/audio/speech", provider.customProviderConfig, schemas.SpeechRequest))
 	req.Header.SetMethod(http.MethodPost)
 	req.Header.SetContentType("application/json")
 	if key.Value != "" {
@@ -1509,7 +1509,7 @@ func (provider *OpenAIProvider) SpeechStream(ctx context.Context, postHookRunner
 	}
 
 	req.Header.SetMethod(http.MethodPost)
-	req.SetRequestURI(provider.networkConfig.BaseURL + providerUtils.GetPathFromContext(ctx, "/v1/audio/speech"))
+	req.SetRequestURI(provider.networkConfig.BaseURL + providerUtils.GetRequestPath(ctx, "/v1/audio/speech", provider.customProviderConfig, schemas.SpeechStreamRequest))
 	req.Header.SetContentType("application/json")
 
 	providerUtils.SetExtraHeaders(ctx, req, provider.networkConfig.ExtraHeaders, nil)
@@ -1686,7 +1686,7 @@ func (provider *OpenAIProvider) Transcription(ctx context.Context, key schemas.K
 	// Set any extra headers from network config
 	providerUtils.SetExtraHeaders(ctx, req, provider.networkConfig.ExtraHeaders, nil)
 
-	req.SetRequestURI(provider.networkConfig.BaseURL + providerUtils.GetPathFromContext(ctx, "/v1/audio/transcriptions"))
+	req.SetRequestURI(provider.networkConfig.BaseURL + providerUtils.GetRequestPath(ctx, "/v1/audio/transcriptions", provider.customProviderConfig, schemas.TranscriptionRequest))
 	req.Header.SetMethod(http.MethodPost)
 	req.Header.SetContentType(writer.FormDataContentType()) // This sets multipart/form-data with boundary
 	if key.Value != "" {
@@ -1786,7 +1786,7 @@ func (provider *OpenAIProvider) TranscriptionStream(ctx context.Context, postHoo
 	providerUtils.SetExtraHeaders(ctx, req, provider.networkConfig.ExtraHeaders, nil)
 
 	req.Header.SetMethod(http.MethodPost)
-	req.SetRequestURI(provider.networkConfig.BaseURL + providerUtils.GetPathFromContext(ctx, "/v1/audio/transcriptions"))
+	req.SetRequestURI(provider.networkConfig.BaseURL + providerUtils.GetRequestPath(ctx, "/v1/audio/transcriptions", provider.customProviderConfig, schemas.TranscriptionStreamRequest))
 	req.Header.SetContentType("application/json")
 
 	// Set headers

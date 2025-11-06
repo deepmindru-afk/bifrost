@@ -180,7 +180,7 @@ func (provider *AnthropicProvider) listModelsByKey(ctx context.Context, key sche
 	providerUtils.SetExtraHeaders(ctx, req, provider.networkConfig.ExtraHeaders, nil)
 
 	// Build URL using centralized URL construction
-	req.SetRequestURI(provider.networkConfig.BaseURL + providerUtils.GetPathFromContext(ctx, fmt.Sprintf("/v1/models?limit=%d", schemas.DefaultPageSize)))
+	req.SetRequestURI(provider.networkConfig.BaseURL + providerUtils.GetRequestPath(ctx, fmt.Sprintf("/v1/models?limit=%d", schemas.DefaultPageSize), provider.customProviderConfig, schemas.ListModelsRequest))
 	req.Header.SetMethod(http.MethodGet)
 	req.Header.SetContentType("application/json")
 	if key.Value != "" {
@@ -258,7 +258,7 @@ func (provider *AnthropicProvider) TextCompletion(ctx context.Context, key schem
 	}
 
 	// Use struct directly for JSON marshaling
-	responseBody, latency, err := provider.completeRequest(ctx, jsonData, fmt.Sprintf("%s/v1/complete", provider.networkConfig.BaseURL), key.Value)
+	responseBody, latency, err := provider.completeRequest(ctx, jsonData, provider.networkConfig.BaseURL+providerUtils.GetRequestPath(ctx, "/v1/complete", provider.customProviderConfig, schemas.TextCompletionRequest), key.Value)
 	if err != nil {
 		return nil, err
 	}
@@ -314,7 +314,7 @@ func (provider *AnthropicProvider) ChatCompletion(ctx context.Context, key schem
 	}
 
 	// Use struct directly for JSON marshaling
-	responseBody, latency, err := provider.completeRequest(ctx, jsonData, provider.networkConfig.BaseURL+providerUtils.GetPathFromContext(ctx, "/v1/messages"), key.Value)
+	responseBody, latency, err := provider.completeRequest(ctx, jsonData, provider.networkConfig.BaseURL+providerUtils.GetRequestPath(ctx, "/v1/messages", provider.customProviderConfig, schemas.ChatCompletionRequest), key.Value)
 	if err != nil {
 		return nil, err
 	}
@@ -384,7 +384,7 @@ func (provider *AnthropicProvider) ChatCompletionStream(ctx context.Context, pos
 	return HandleAnthropicChatCompletionStreaming(
 		ctx,
 		provider.client,
-		provider.networkConfig.BaseURL+providerUtils.GetPathFromContext(ctx, "/v1/messages"),
+		provider.networkConfig.BaseURL+providerUtils.GetRequestPath(ctx, "/v1/messages", provider.customProviderConfig, schemas.ChatCompletionStreamRequest),
 		jsonData,
 		headers,
 		provider.networkConfig.ExtraHeaders,
@@ -610,7 +610,7 @@ func (provider *AnthropicProvider) Responses(ctx context.Context, key schemas.Ke
 	}
 
 	// Use struct directly for JSON marshaling
-	responseBody, latency, err := provider.completeRequest(ctx, jsonData, provider.networkConfig.BaseURL+providerUtils.GetPathFromContext(ctx, "/v1/messages"), key.Value)
+	responseBody, latency, err := provider.completeRequest(ctx, jsonData, provider.networkConfig.BaseURL+providerUtils.GetRequestPath(ctx, "/v1/messages", provider.customProviderConfig, schemas.ResponsesRequest), key.Value)
 	if err != nil {
 		return nil, err
 	}
@@ -671,7 +671,7 @@ func (provider *AnthropicProvider) ResponsesStream(ctx context.Context, postHook
 	defer fasthttp.ReleaseRequest(req)
 
 	req.Header.SetMethod(http.MethodPost)
-	req.SetRequestURI(provider.networkConfig.BaseURL + providerUtils.GetPathFromContext(ctx, "/v1/messages"))
+	req.SetRequestURI(provider.networkConfig.BaseURL + providerUtils.GetRequestPath(ctx, "/v1/messages", provider.customProviderConfig, schemas.ResponsesStreamRequest))
 	req.Header.SetContentType("application/json")
 	req.Header.Set("anthropic-version", provider.apiVersion)
 	if key.Value != "" {
