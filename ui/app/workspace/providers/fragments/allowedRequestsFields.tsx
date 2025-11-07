@@ -112,7 +112,7 @@ export function AllowedRequestsFields({ control, namePrefix = "allowed_requests"
 													<Settings2 className="h-4 w-4" />
 												</button>
 											</PopoverTrigger>
-											<PopoverContent className="w-80" align="end">
+											<PopoverContent className="w-80" align="end" onOpenAutoFocus={(e) => e.preventDefault()}>
 												<div className="space-y-2">
 													<h4 className="font-medium text-sm">Custom Path</h4>
 													<p className="text-xs text-muted-foreground">Override the default endpoint path</p>
