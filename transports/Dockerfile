@@ -14,7 +14,7 @@
   # Skip the copy-build step since we'll copy the files in the Go build stage
   
   # --- Go Build Stage: Compile the Go binary ---
-  FROM golang:1.26.1-alpine3.23@sha256:2389ebfa5b7f43eeafbd6be0c3700cc46690ef842ad962f6c5bd6be49ed82039 AS builder
+  FROM golang:1.26.2-alpine AS builder
   WORKDIR /app
   
   # Install dependencies including gcc for CGO and sqlite
